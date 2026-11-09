@@ -1,0 +1,616 @@
+{
+  "users": [
+    {
+      "id": "u1",
+      "name": "Rithvi",
+      "role": "student",
+      "points": 50,
+      "badges": [
+        "Contributor"
+      ],
+      "passkey_salt": "7c582c10f789f83fd54391819f72fa8b",
+      "passkey_hash": "b6501c6447accd359b5bf57aaaab71b392b3fbe9fe6204ace0089acae494ec43",
+      "username": "rithvi_11"
+    },
+    {
+      "id": "u2",
+      "name": "Ananya Shah",
+      "role": "student",
+      "points": 50,
+      "badges": [
+        "Contributor"
+      ],
+      "passkey_salt": "3c316552eac84534da5de20fd30efb7b",
+      "passkey_hash": "c3659a4b2d7883c66ac04c45bb79e1dd9c06797594306d179e4dc6467cb9a412",
+      "username": "ananya.s1"
+    },
+    {
+      "id": "u3",
+      "name": "Kabir Menon",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "2162137d1985e4d0c3cdbaea2145e693",
+      "passkey_hash": "ee3cc5a39eb13508c85f46273805c2b50c239e197e0eb2858980e00b6e16bcf6",
+      "username": "kabir-m2"
+    },
+    {
+      "id": "u4",
+      "name": "Meera Nair",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "149859fe74cb6d6d5e96ee9f4315ecbe",
+      "passkey_hash": "1653c6a525db43007d581b87e5564c70f6dea744fbcd539dc7736cc9e380f21d",
+      "username": "meera.n1"
+    },
+    {
+      "id": "u5",
+      "name": "Ms. Iyer",
+      "role": "teacher",
+      "points": 25,
+      "badges": [
+        "Master Mentor"
+      ],
+      "passkey_salt": "c884d833e34afc924ae18b1e8b52db2c",
+      "passkey_hash": "ab06c7a64590658f9d01a94e066479bbf0600de629dc78ef911b3dbf18f59c89",
+      "username": "ms-iyer",
+      "subjects": [
+        "Mathematics",
+        "Physics"
+      ]
+    },
+    {
+      "id": "u6",
+      "name": "Mr. Rao",
+      "role": "teacher",
+      "points": 50,
+      "badges": [
+        "Master Mentor"
+      ],
+      "passkey_salt": "a9c08b240b83476f7b92c13d7314335b",
+      "passkey_hash": "dfb6659133886844a1b5ccaba98b44d591c5d85e5b740e3287858168072659c8",
+      "username": "mr-rao",
+      "subjects": [
+        "Chemistry",
+        "Physics"
+      ]
+    },
+    {
+      "id": "u7",
+      "name": "krish",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "896ddb6063f6557e1c838f8275cfe80c",
+      "passkey_hash": "48c473e17d4d42ef1c95198d9dc93c5435b657fdbda218cd8564a20fb9471d69",
+      "username": "krish_01"
+    },
+    {
+      "id": "u9",
+      "name": "Mr.Gopal",
+      "role": "teacher",
+      "points": 50,
+      "badges": [
+        "Master Mentor"
+      ],
+      "passkey_salt": "ef7343daa22c6fe2cb4779bae2356cae",
+      "passkey_hash": "dbb88ff561b5e1525238b22da59a0447641554372042c13409cae12776469072",
+      "username": "mr-gopal",
+      "subjects": [
+        "Computer Application",
+        "Mathematics"
+      ]
+    },
+    {
+      "id": "u10",
+      "name": "Ranjith",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "72bdb49ed88f1c06dc402bbd62b9f656",
+      "passkey_hash": "c265e786000642bdad2f3d4ae01da4e5d36a9dc01362685bc6b3c3dedd3c9c86",
+      "username": "ranjith_2"
+    },
+    {
+      "id": "u11",
+      "name": "boy_7",
+      "username": "boy_7",
+      "role": "teacher",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "c09090e4236a8ed50bb3cf7ade7080a5",
+      "passkey_hash": "48f3a9cc4bce5b2a8c8919e6dedb26f765a27c11f59c1d1869fa5c43a25a6835"
+    },
+    {
+      "id": "u12",
+      "name": "ms.nair1",
+      "username": "ms.nair1",
+      "role": "teacher",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "36873f1401db4cf60985f7342c265229",
+      "passkey_hash": "599c25b5eef611070cad14f4626eade1dcd836c5fe47b896791a7e1a5b3a2fbe"
+    },
+    {
+      "id": "u13",
+      "name": "teacher_5",
+      "username": "teacher_5",
+      "role": "teacher",
+      "points": 25,
+      "badges": [
+        "Master Mentor"
+      ],
+      "passkey_salt": "9c185b4be7b086420c34106d175220b6",
+      "passkey_hash": "822d475bbe3c40d71be1c049688b7181920a694c023053fbd4066039703bc964"
+    },
+    {
+      "id": "u14",
+      "name": "bro.9",
+      "username": "bro.9",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "6f03bf2aac6a2c90be3e1e35cf2330bc",
+      "passkey_hash": "9f8d9c8bea39e34dabb1e8fe65502b90b2d88f329396f47e9b5c84e1a8655155"
+    },
+    {
+      "id": "u15",
+      "name": "teacher.0",
+      "username": "teacher.0",
+      "role": "teacher",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "92c47c1be2bbb51eec349d7081b3193a",
+      "passkey_hash": "717f8e5ceb920ce223d710396f447b4ec53bde66b1dd9e528150d34fefd05850"
+    },
+    {
+      "id": "u16",
+      "name": "sid.6",
+      "username": "sid.6",
+      "role": "teacher",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "08ac05a92d9c010ad2b7cd7512e7974b",
+      "passkey_hash": "55472b500d25a0afa9c95034fb00ee1ff266b61d7b0c27d9729ec3daaaf28455"
+    },
+    {
+      "id": "u17",
+      "name": "sid.67",
+      "username": "sid.67",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "passkey_salt": "5404cd5df324fdc60fc5bacea5a90889",
+      "passkey_hash": "7eac9af9040777c493d6833acdad5c63fee283be31ff314318ee5bbc087c34ce"
+    },
+    {
+      "id": "u18",
+      "name": "martin-67",
+      "username": "martin-67",
+      "role": "teacher",
+      "points": 25,
+      "badges": [
+        "Master Mentor"
+      ],
+      "passkey_salt": "0d0a2d6341e252513bc5b6a58b02e11e",
+      "passkey_hash": "ea97efa7cdb9c87314e3a7f3dbe840fe923e953e38aa8d796417b83706a1682b"
+    },
+    {
+      "id": "u19",
+      "name": "rithvi.24",
+      "username": "rithvi.24",
+      "role": "teacher",
+      "points": 0,
+      "badges": [],
+      "subjects": [
+        "Mathematics"
+      ],
+      "passkey_salt": "1fc050416f36b024a387f3d260fe60bf",
+      "passkey_hash": "bf48ed540abfc04089746050da6406a6d9b03e7d25ce8a18b229199612ad4dd0"
+    },
+    {
+      "id": "u20",
+      "name": "rithvi.34",
+      "username": "rithvi.34",
+      "role": "student",
+      "points": 0,
+      "badges": [],
+      "subjects": [],
+      "passkey_salt": "74273d7b6427f57fa11adf00bbd7025e",
+      "passkey_hash": "177cae5c7f0f07fa824abba1ec09e7a3a80c86df7993f776cfcc15e601b23b05"
+    },
+    {
+      "id": "u21",
+      "name": "go.3",
+      "username": "go.3",
+      "role": "teacher",
+      "points": 25,
+      "badges": [
+        "Master Mentor"
+      ],
+      "subjects": [
+        "Physics"
+      ],
+      "passkey_salt": "0ddc48f58d3f8e813186b03255a0d39b",
+      "passkey_hash": "86729d388d80d16089ea3f065fee1aebac876673f3d4d6cffcbe9349f3bdec34"
+    }
+  ],
+  "doubts": [
+    {
+      "id": "d1",
+      "student_id": "u4",
+      "student_name": "Meera Nair",
+      "subject": "Physics",
+      "question": "How do I use Ohm's law when a circuit has two resistors in series? I can calculate one resistor, but I mix up the total voltage.",
+      "status": "Resolved",
+      "created_at": "2026-11-02T08:30:00",
+      "answers": [
+        {
+          "id": "a1",
+          "author_id": "u1",
+          "author_name": "Rithvi",
+          "explanation": "Add the resistors first: R_total = R1 + R2. The same current flows through both. Then V_total = I \u00d7 R_total. The voltage across each resistor is I \u00d7 R for that resistor, and those two voltages add back to the battery voltage.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "rithvi_11"
+        }
+      ],
+      "student_username": "meera.n1"
+    },
+    {
+      "id": "d2",
+      "student_id": "u1",
+      "student_name": "Rithvi",
+      "subject": "Mathematics",
+      "question": "When a quadratic equation has no real roots, what should I write in the exam besides 'discriminant is negative'?",
+      "status": "Resolved",
+      "created_at": "2026-11-02T09:00:00",
+      "answers": [
+        {
+          "id": "a2",
+          "author_id": "u5",
+          "author_name": "Ms. Iyer",
+          "explanation": "Compute D = b\u00b2 \u2212 4ac and show the substitution. If D < 0, state that the roots are not real. If the syllabus asks for complex roots, write them as (\u2212b \u00b1 i\u221a|D|) / 2a. Also mention that the parabola does not cross the x-axis.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [
+            "u2"
+          ],
+          "author_username": "ms-iyer"
+        }
+      ],
+      "student_username": "rithvi_11"
+    },
+    {
+      "id": "d3",
+      "student_id": "u2",
+      "student_name": "Ananya Shah",
+      "subject": "Chemistry",
+      "question": "Why does increasing temperature speed up a reaction? I want a collision-theory answer I can use in a 3-mark question.",
+      "status": "Resolved",
+      "created_at": "2026-11-02T09:20:00",
+      "answers": [
+        {
+          "id": "a4",
+          "author_id": "u6",
+          "author_name": "Mr. Rao",
+          "explanation": "Higher temperature means particles move faster and collide more often. A larger fraction of collisions also reach the activation energy, so more collisions are successful and the reaction speeds up.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "mr-rao"
+        }
+      ],
+      "student_username": "ananya.s1"
+    },
+    {
+      "id": "d4",
+      "student_id": "u3",
+      "student_name": "Kabir Menon",
+      "subject": "Computer Science",
+      "question": "In Python, when should I store data in a list and when should I use a dictionary? A short example would help.",
+      "status": "Resolved",
+      "created_at": "2026-11-02T09:40:00",
+      "answers": [
+        {
+          "id": "a5",
+          "author_id": "u1",
+          "author_name": "Rithvi",
+          "explanation": "it must be stores",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "rithvi_11"
+        }
+      ],
+      "student_username": "kabir-m2"
+    },
+    {
+      "id": "d5",
+      "student_id": "u3",
+      "student_name": "Kabir Menon",
+      "subject": "Physics",
+      "question": "Why does a concave mirror form a real image when the object is beyond the focus, and a virtual image when it is between the focus and the mirror?",
+      "status": "Resolved",
+      "created_at": "2026-11-02T15:53:12",
+      "answers": [
+        {
+          "id": "a3",
+          "author_id": "u2",
+          "author_name": "Ananya Shah",
+          "explanation": "Beyond the focus, reflected rays actually meet in front of the mirror, so the image is real and can be caught on a screen. Between the focus and the mirror, the reflected rays only appear to meet behind the mirror, so the image is virtual.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "ananya.s1"
+        }
+      ],
+      "student_username": "kabir-m2"
+    },
+    {
+      "id": "d6",
+      "student_id": "u2",
+      "student_name": "Ananya Shah",
+      "subject": "Physics",
+      "question": "is it possible",
+      "status": "Resolved",
+      "created_at": "2026-11-02T16:02:07",
+      "answers": [
+        {
+          "id": "a8",
+          "author_id": "u9",
+          "author_name": "Mr.Gopal",
+          "explanation": "ydgfhwjryg7iugkje",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "mr-gopal"
+        }
+      ],
+      "student_username": "ananya.s1"
+    },
+    {
+      "id": "d7",
+      "student_id": "u1",
+      "student_name": "Rithvi",
+      "subject": "Chemistry",
+      "question": "Why does the boiling point of water drop at high altitude? I know pressure is lower, but I am not sure how to write it in the exam.",
+      "status": "Resolved",
+      "created_at": "2026-11-02T16:34:07",
+      "answers": [
+        {
+          "id": "a6",
+          "author_id": "u2",
+          "author_name": "Ananya Shah",
+          "explanation": "At high altitude air pressure is lower, so water molecules need less heat to escape. Write that boiling happens when vapour pressure equals atmospheric pressure, and that pressure is lower on a mountain, so the boiling point falls below 100 C.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "ananya.s1"
+        }
+      ],
+      "student_username": "rithvi_11"
+    },
+    {
+      "id": "d8",
+      "student_id": "u7",
+      "student_name": "krish",
+      "subject": "Physics",
+      "question": "this fgnbnbhjv  vyjmnbvcxzssssss ghfiuykh",
+      "status": "Resolved",
+      "created_at": "2026-11-02T16:34:53",
+      "answers": [
+        {
+          "id": "a7",
+          "author_id": "u9",
+          "author_name": "Mr.Gopal",
+          "explanation": "thsiwjfbsuvbc djvierkb",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "mr-gopal"
+        }
+      ],
+      "student_username": "krish_01",
+      "important": true
+    },
+    {
+      "id": "d9",
+      "student_id": "u10",
+      "student_name": "Ranjith",
+      "subject": "Physics",
+      "question": "Explain briefly about pascal law ?",
+      "status": "Resolved",
+      "created_at": "2026-11-02T17:48:37",
+      "answers": [
+        {
+          "id": "a9",
+          "author_id": "u6",
+          "author_name": "Mr. Rao",
+          "explanation": "jhjhsdjsjdhjshdjsdsdfssds",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": [],
+          "author_username": "mr-rao"
+        }
+      ],
+      "student_username": "ranjith_2"
+    },
+    {
+      "id": "d10",
+      "student_id": "u4",
+      "student_name": "Meera Nair",
+      "subject": "Physics",
+      "question": "hat isohms lasmsx",
+      "status": "Resolved",
+      "created_at": "2026-11-03T19:53:59",
+      "answers": [
+        {
+          "id": "a10",
+          "author_id": "u13",
+          "author_name": "teacher_5",
+          "author_username": "teacher_5",
+          "explanation": "this is beacsuse",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": []
+        }
+      ],
+      "student_username": "meera.n1"
+    },
+    {
+      "id": "d11",
+      "student_id": "u17",
+      "student_name": "sid.67",
+      "student_username": "sid.67",
+      "subject": "Computer Science",
+      "question": "Tell me about B-Tree",
+      "status": "Resolved",
+      "created_at": "2026-11-05T21:23:56",
+      "answers": [
+        {
+          "id": "a11",
+          "author_id": "u18",
+          "author_name": "martin-67",
+          "author_username": "martin-67",
+          "explanation": "A B-tree is a self-balancing tree data structure designed for systems that read and write large blocks of data, such as databases and file systems.\n\u200bUnlike standard binary search trees where each node can have only two children, B-tree nodes can have a variable, large number of children.",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": []
+        }
+      ]
+    },
+    {
+      "id": "d12",
+      "student_id": "u20",
+      "student_name": "rithvi.34",
+      "student_username": "rithvi.34",
+      "subject": "Physics",
+      "question": "whats tytsdzv dgnbvvbmyu",
+      "status": "Resolved",
+      "created_at": "2026-11-09T21:23:25",
+      "answers": [
+        {
+          "id": "a12",
+          "author_id": "u21",
+          "author_name": "go.3",
+          "author_username": "go.3",
+          "explanation": "ffgrtthfbfrhr",
+          "points_awarded": 25,
+          "verified": true,
+          "upvotes": []
+        }
+      ],
+      "private": true,
+      "important": false,
+      "attachments": [
+        {
+          "id": "fd098118c",
+          "name": "iron-man-render-3d-bright.jpg",
+          "path": "file_3101b77b_iron-man-render-3d-bright.jpg",
+          "kind": "image"
+        }
+      ]
+    }
+  ],
+  "point_events": [
+    {
+      "user_id": "u1",
+      "points": 10,
+      "reason": "Solved a peer doubt",
+      "at": "2026-11-02T08:45:00"
+    },
+    {
+      "user_id": "u5",
+      "points": 25,
+      "reason": "Solved a complex doubt",
+      "at": "2026-11-02T09:10:00"
+    },
+    {
+      "user_id": "u2",
+      "points": 10,
+      "reason": "Solved a peer doubt",
+      "at": "2026-11-02T15:54:44"
+    },
+    {
+      "user_id": "u2",
+      "points": 15,
+      "reason": "Teacher verified a solution",
+      "at": "2026-11-02T15:56:41"
+    },
+    {
+      "user_id": "u6",
+      "points": 25,
+      "reason": "Solved a complex doubt",
+      "at": "2026-11-02T15:57:05"
+    },
+    {
+      "user_id": "u1",
+      "points": 10,
+      "reason": "Solved a peer doubt",
+      "at": "2026-11-02T16:00:55"
+    },
+    {
+      "user_id": "u2",
+      "points": 10,
+      "reason": "Answered a doubt",
+      "at": "2026-11-02T16:36:22"
+    },
+    {
+      "user_id": "u2",
+      "points": 15,
+      "reason": "Teacher verified a solution",
+      "at": "2026-11-02T16:37:43"
+    },
+    {
+      "user_id": "u1",
+      "points": 15,
+      "reason": "Teacher verified a solution",
+      "at": "2026-11-02T17:11:14"
+    },
+    {
+      "user_id": "u1",
+      "points": 15,
+      "reason": "Teacher verified a solution",
+      "at": "2026-11-02T17:11:20"
+    },
+    {
+      "user_id": "u9",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-02T17:11:53"
+    },
+    {
+      "user_id": "u9",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-02T17:11:58"
+    },
+    {
+      "user_id": "u6",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-02T17:53:20"
+    },
+    {
+      "user_id": "u13",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-05T21:16:45"
+    },
+    {
+      "user_id": "u18",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-05T21:30:45"
+    },
+    {
+      "user_id": "u21",
+      "points": 25,
+      "reason": "Answered a doubt",
+      "at": "2026-11-09T21:25:38"
+    }
+  ]
+}
