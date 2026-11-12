@@ -34,6 +34,9 @@ SUBJECTS = [
 STUDENT_SOLVE_POINTS = 10
 TEACHER_VERIFY_POINTS = 15
 TEACHER_SOLVE_POINTS = 25
+DAILY_DOUBT_LIMIT = 6
+OVERDUE_HOURS = 6
+TEACHER_APPROVALS_NEEDED = 2
 
 USERNAME_RE = re.compile(r"^(?=(?:[a-z]*[^a-z0-9][a-z]*)+)(?!(?:\D*\d){3})[a-z0-9._-]+$")
 USERNAME_HINT = "Use lowercase letters, at least one symbol such as _ . or -, and at most two digits."
@@ -61,7 +64,9 @@ def load_data():
         save_data(data)
         return data
     with open(DATA_PATH, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+        data = json.load(handle)
+    ensure_teacher_bootstrap(data)
+    return data
 
 
 def save_data(data):
@@ -302,6 +307,71 @@ def subject_checkboxes(prefix, selected=None):
     return picked
 
 
+def is_verified_teacher(user):
+    return bool(user) and user.get("role") == "teacher" and user.get("status", "verified") == "verified"
+
+
+def is_pending_teacher(user):
+    return bool(user) and user.get("role") == "teacher" and user.get("status") == "pending"
+
+
+def verified_teachers(data):
+    return [person for person in data["users"] if is_verified_teacher(person)]
+
+
+def pending_teacher_accounts(data):
+    return [person for person in data["users"] if is_pending_teacher(person)]
+
+
+def ensure_teacher_bootstrap(data):
+    changed = False
+    teachers = [person for person in data.get("users", []) if person.get("role") == "teacher"]
+    verified = [person for person in teachers if person.get("status") == "verified"]
+    if len(verified) < 2:
+        for person in teachers[:2]:
+            if person.get("status") != "verified":
+                person["status"] = "verified"
+                person.setdefault("approvals", [])
+                changed = True
+    if changed:
+        save_data(data)
+
+
+def doubts_posted_today(data, user_id):
+    today = datetime.now().date()
+    count = 0
+    for doubt in data.get("doubts", []):
+        if doubt.get("student_id") != user_id:
+            continue
+        try:
+            if parse_stamp(doubt["created_at"]).date() == today:
+                count += 1
+        except (TypeError, ValueError):
+            continue
+    return count
+
+
+def is_overdue(doubt):
+    if doubt.get("status") != "Open" or doubt.get("answers"):
+        return False
+    try:
+        created = parse_stamp(doubt["created_at"])
+    except (TypeError, ValueError):
+        return False
+    return datetime.now() - created > timedelta(hours=OVERDUE_HOURS)
+
+
+def approve_teacher(data, candidate, reviewer):
+    approvals = candidate.setdefault("approvals", [])
+    if reviewer["id"] in approvals:
+        return "already"
+    approvals.append(reviewer["id"])
+    if len(approvals) >= TEACHER_APPROVALS_NEEDED:
+        candidate["status"] = "verified"
+        return "verified"
+    return "voted"
+
+
 def can_see_doubt(user, doubt):
     if not doubt.get("private"):
         return True
@@ -389,7 +459,51 @@ def inject_css():
                 font-weight: 600;
                 color: #5c5146;
             }
-            .stButton > button { min-height: 3rem; border-radius: 999px; font-weight: 700; }
+            .stButton > button, .stFormSubmitButton > button, button[kind] {
+                min-height: 3.1rem;
+                border-radius: 999px !important;
+                font-weight: 800 !important;
+                font-size: 1.02rem !important;
+                letter-spacing: 0.01em;
+                box-shadow: 0 6px 0 rgba(28, 36, 48, 0.12), 0 10px 18px rgba(255, 90, 54, 0.12);
+                transition: transform 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease;
+            }
+            .stButton > button:hover, .stFormSubmitButton > button:hover {
+                transform: translateY(-3px) scale(1.03);
+                filter: brightness(1.05);
+                box-shadow: 0 10px 0 rgba(28, 36, 48, 0.1), 0 16px 22px rgba(255, 90, 54, 0.18);
+            }
+            .stButton > button:active, .stFormSubmitButton > button:active {
+                transform: translateY(2px) scale(0.99);
+                box-shadow: 0 2px 0 rgba(28, 36, 48, 0.12);
+            }
+            .action-slot .stButton > button { color: #fff !important; border: 0 !important; }
+            .action-ask .stButton > button { background: linear-gradient(135deg, #ff5a36, #ff8a4c) !important; }
+            .action-help .stButton > button { background: linear-gradient(135deg, #1a73e8, #4c8dff) !important; }
+            .action-scores .stButton > button { background: linear-gradient(135deg, #12a06a, #3ddc97) !important; }
+            .action-check .stButton > button { background: linear-gradient(135deg, #7b5cff, #9b87ff) !important; }
+            .action-out .stButton > button { background: linear-gradient(135deg, #c2410c, #ea580c) !important; }
+            .action-approve .stButton > button { background: linear-gradient(135deg, #12a06a, #22c55e) !important; color: #fff !important; }
+            .action-reject .stButton > button { background: linear-gradient(135deg, #b91c1c, #ef4444) !important; color: #fff !important; }
+            .overdue-banner {
+                background: linear-gradient(90deg, #fff1c2, #ffd28a);
+                border: 2px solid #f4b400;
+                border-radius: 16px;
+                padding: 0.85rem 1rem;
+                margin: 0.4rem 0 0.9rem;
+                font-weight: 700;
+                color: #7a4a00;
+            }
+            .pending-banner {
+                background: #fff4e5;
+                border: 2px solid #ffb347;
+                border-radius: 16px;
+                padding: 0.85rem 1rem;
+                margin: 0.4rem 0 0.9rem;
+                font-weight: 700;
+                color: #9a4100;
+            }
+            .pill-overdue { background: #c2410c; color: #fff; }
             .hero-card, .stat-card, .feed-card, .score-card, .doubt-card, .auth-hero {
                 border-radius: 22px;
             }
@@ -431,11 +545,12 @@ def inject_css():
             .welcome-kicker { font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: #ff5a36; font-size: 0.78rem; }
             .welcome-id { font-size: 2.05rem; font-weight: 900; margin: 0.1rem 0 0.35rem; line-height: 1.1; color: #171f2a; }
             .icon-row { display: flex; justify-content: flex-end; gap: 0.35rem; flex: 0 0 auto; }
-            div[data-testid="stHorizontalBlock"]:has(.icon-slot) { flex-wrap: nowrap !important; align-items: flex-start; }
-            .icon-slot .stButton > button {
-                min-height: 2.8rem; min-width: 2.8rem; padding: 0;
-                font-size: 1.15rem; width: 2.8rem;
+            div[data-testid="stHorizontalBlock"]:has(.action-slot) {
+                flex-wrap: wrap !important;
+                align-items: stretch;
+                gap: 0.45rem;
             }
+            .action-slot { min-width: 140px; flex: 1 1 140px; }
             .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin: 0.8rem 0 1rem; }
             .stat-card {
                 background: #fff;
@@ -556,11 +671,13 @@ def inject_css():
                 padding: 0.05rem 0.45rem;
                 vertical-align: middle;
             }
-            @media (max-width: 800px) {
+            @media (max-width: 768px) {
                 .block-container { padding-left: 0.8rem; padding-right: 0.8rem; }
-                .welcome-id { font-size: 1.45rem; }
+                .welcome-id { font-size: 1.35rem; }
                 .stat-grid { grid-template-columns: 1fr; }
-                .icon-slot .stButton > button { min-width: 2.5rem; width: 2.5rem; min-height: 2.5rem; }
+                div[data-testid="stHorizontalBlock"]:has(.action-slot) { flex-direction: column !important; }
+                .action-slot { min-width: 100%; }
+                .action-slot .stButton > button { width: 100%; min-height: 3.1rem; }
             }
         </style>
         """,
@@ -581,7 +698,7 @@ def render_welcome():
         "<h1>EduMatch</h1><p>Classmates help classmates. Teachers check the answers.</p></div>",
         unsafe_allow_html=True,
     )
-    if st.button("Continue", type="primary", **stretch_kwargs(st.button)):
+    if st.button("🚀 Let's go!", type="primary", **stretch_kwargs(st.button)):
         st.session_state["auth_screen"] = "signin"
         st.rerun()
 
@@ -593,7 +710,7 @@ def render_auth(data):
         return
     show_flash()
     if auth_screen == "signin":
-        if st.button("⟵ Back", type="tertiary"):
+        if st.button("⬅️ Back", type="tertiary"):
             st.session_state["auth_screen"] = "welcome"
             st.rerun()
         st.markdown(
@@ -601,9 +718,9 @@ def render_auth(data):
             unsafe_allow_html=True,
         )
         with st.form("sign_in"):
-            username = st.text_input("User ID", placeholder="rithvi_11")
+            username = st.text_input("User ID", placeholder="Enter a registered ID")
             passkey = st.text_input("Passkey", type="password", max_chars=4, placeholder="4 digits")
-            submitted = st.form_submit_button("Sign in", type="primary", **stretch_kwargs(st.form_submit_button))
+            submitted = st.form_submit_button("🔑 Sign in", type="primary", **stretch_kwargs(st.form_submit_button))
         if submitted:
             if not valid_username(username):
                 st.error(USERNAME_HINT)
@@ -614,12 +731,12 @@ def render_auth(data):
                     st.session_state["screen"] = "home"
                     st.rerun()
                 st.error("That User ID and passkey do not match.")
-        if st.button("Create a new account"):
+        if st.button("✨ Create a new account"):
             st.session_state["auth_screen"] = "signup"
             st.rerun()
         return
 
-    if st.button("⟵ Back", type="tertiary"):
+    if st.button("⬅️ Back", type="tertiary"):
         st.session_state["auth_screen"] = "signin"
         st.rerun()
     st.markdown(
@@ -634,7 +751,7 @@ def render_auth(data):
     with st.form("create_account"):
         username = st.text_input("User ID", placeholder="new.user1")
         passkey = st.text_input("Choose a passkey", type="password", max_chars=4, placeholder="4 digits")
-        created = st.form_submit_button("Create account", type="primary", **stretch_kwargs(st.form_submit_button))
+        created = st.form_submit_button("🎉 Create my account", type="primary", **stretch_kwargs(st.form_submit_button))
     if created:
         clean = username.strip()
         role = "teacher" if as_teacher else "student"
@@ -656,47 +773,59 @@ def render_auth(data):
                 "badges": [],
                 "subjects": list(teacher_subjects_pick) if role == "teacher" else [],
             }
+            if role == "teacher":
+                if len(verified_teachers(data)) < TEACHER_APPROVALS_NEEDED:
+                    user["status"] = "verified"
+                    user["approvals"] = []
+                    notice = "Account created. You are a verified bootstrap teacher."
+                else:
+                    user["status"] = "pending"
+                    user["approvals"] = []
+                    notice = "Teacher account created. Two verified teachers must approve you before you can answer doubts."
+            else:
+                user["status"] = "active"
+                notice = "Account created. You are signed in as a student."
             set_passkey(user, passkey.strip())
             data["users"].append(user)
             save_data(data)
             st.session_state["user_id"] = user["id"]
             st.session_state["screen"] = "home"
-            flash(f"Account created. You are signed in as a {role}.")
+            flash(notice)
             st.rerun()
 
 
 def icon_bar(user):
     is_teacher = user["role"] == "teacher"
-    left, a, b, c = st.columns([4.4, 0.7, 0.7, 0.7], gap="small")
-    with left:
-        st.markdown(
-            (
-                '<div class="welcome-kicker">Welcome</div>'
-                f'<div class="welcome-id">{html.escape(username_of(user))} {role_badge(user["role"], user=user)}</div>'
-            ),
-            unsafe_allow_html=True,
-        )
+    st.markdown(
+        (
+            '<div class="welcome-kicker">Welcome</div>'
+            f'<div class="welcome-id">{html.escape(username_of(user))} {role_badge(user["role"], user=user)}</div>'
+        ),
+        unsafe_allow_html=True,
+    )
+    a, b, c = st.columns(3, gap="small")
     with a:
-        st.markdown('<div class="icon-slot">', unsafe_allow_html=True)
+        st.markdown('<div class="action-slot action-ask">', unsafe_allow_html=True)
         if is_teacher:
-            if st.button("✏️", help="Help a student"):
+            if st.button("🛠️ Resolve a doubt", **stretch_kwargs(st.button)):
                 go("help")
         else:
-            if st.button("❓", help="Ask a doubt"):
+            if st.button("❓ Ask a doubt", **stretch_kwargs(st.button)):
                 go("ask")
         st.markdown("</div>", unsafe_allow_html=True)
     with b:
-        st.markdown('<div class="icon-slot">', unsafe_allow_html=True)
+        help_class = "action-scores" if is_teacher else "action-help"
+        st.markdown(f'<div class="action-slot {help_class}">', unsafe_allow_html=True)
         if is_teacher:
-            if st.button("🏆", help="Scores"):
+            if st.button("🏆 Scores", **stretch_kwargs(st.button)):
                 go("scores")
         else:
-            if st.button("✏️", help="Help a classmate"):
+            if st.button("✏️ Help a classmate", **stretch_kwargs(st.button)):
                 go("help")
         st.markdown("</div>", unsafe_allow_html=True)
     with c:
-        st.markdown('<div class="icon-slot">', unsafe_allow_html=True)
-        if st.button("🚪", help="Sign out"):
+        st.markdown('<div class="action-slot action-out">', unsafe_allow_html=True)
+        if st.button("🚪 Sign out", **stretch_kwargs(st.button)):
             sign_out()
         st.markdown("</div>", unsafe_allow_html=True)
 
@@ -715,6 +844,8 @@ def extra_pills(doubt):
         bits.append('<span class="feed-pill pill-star">★ Important</span>')
     if doubt.get("attachments"):
         bits.append('<span class="feed-pill pill-mine">📎</span>')
+    if is_overdue(doubt):
+        bits.append('<span class="feed-pill pill-overdue">Overdue</span>')
     return "".join(bits)
 
 
@@ -739,7 +870,7 @@ def doubt_preview(doubt, data, key, kind="open"):
         ),
         unsafe_allow_html=True,
     )
-    if st.button("Open", key=key, **stretch_kwargs(st.button)):
+    if st.button("👀 Open", key=key, **stretch_kwargs(st.button)):
         go("doubt", doubt["id"])
 
 
@@ -767,19 +898,83 @@ def render_home(data, user):
         ),
         unsafe_allow_html=True,
     )
-    extras = st.columns(2 if user["role"] == "teacher" else 1)
+    extras = st.columns(2 if is_verified_teacher(user) else 1)
     with extras[0]:
-        if st.button("Scores", type="secondary", **stretch_kwargs(st.button)):
+        st.markdown('<div class="action-slot action-scores">', unsafe_allow_html=True)
+        if st.button("🏆 Scores", key="home-scores", **stretch_kwargs(st.button)):
             go("scores")
-    if user["role"] == "teacher":
+        st.markdown("</div>", unsafe_allow_html=True)
+    if is_verified_teacher(user):
         with extras[1]:
-            if st.button("Check answers", type="primary", **stretch_kwargs(st.button)):
+            st.markdown('<div class="action-slot action-check">', unsafe_allow_html=True)
+            if st.button("✅ Check answers", key="home-check", **stretch_kwargs(st.button)):
                 go("check")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    subject_choice = st.selectbox("Subject filter", ["All subjects"] + SUBJECTS, key="home_subject_filter")
+
+    if is_pending_teacher(user):
+        votes = len(user.get("approvals", []))
+        st.markdown(
+            (
+                '<div class="pending-banner">Your teacher account is pending. '
+                f"{votes}/{TEACHER_APPROVALS_NEEDED} teacher approvals so far. "
+                "You can browse, but you cannot answer or check doubts yet.</div>"
+            ),
+            unsafe_allow_html=True,
+        )
+    if user.get("status") == "rejected":
+        st.error("This teacher account was rejected. Ask a verified teacher if you need a new review.")
+
+    if is_verified_teacher(user):
+        waiting = pending_teacher_accounts(data)[:3]
+        if waiting:
+            st.markdown("### Teacher approvals")
+            st.info("Confirm whether these new teacher accounts are genuine.")
+            for candidate in waiting:
+                with st.container(border=True):
+                    st.markdown(
+                        f"**{html.escape(username_of(candidate))}** {role_badge('teacher', user=candidate)} · "
+                        f"{len(candidate.get('approvals', []))}/{TEACHER_APPROVALS_NEEDED} approvals",
+                        unsafe_allow_html=True,
+                    )
+                    if user["id"] in candidate.get("approvals", []):
+                        st.caption("You already approved this account.")
+                    elif candidate["id"] == user["id"]:
+                        st.caption("Waiting for other teachers.")
+                    else:
+                        yes, no = st.columns(2)
+                        with yes:
+                            st.markdown('<div class="action-slot action-approve">', unsafe_allow_html=True)
+                            if st.button("👍 Approve", key=f"approve-{candidate['id']}", **stretch_kwargs(st.button)):
+                                result = approve_teacher(data, candidate, user)
+                                save_data(data)
+                                flash("This teacher is now verified." if result == "verified" else "Approval saved.")
+                                st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+                        with no:
+                            st.markdown('<div class="action-slot action-reject">', unsafe_allow_html=True)
+                            if st.button("👎 Reject", key=f"reject-{candidate['id']}", **stretch_kwargs(st.button)):
+                                candidate["status"] = "rejected"
+                                save_data(data)
+                                flash(f"{username_of(candidate)} was rejected.")
+                                st.rerun()
+                            st.markdown("</div>", unsafe_allow_html=True)
+
+        overdue = [doubt for doubt in visible_doubts(data, user) if is_overdue(doubt)]
+        if overdue:
+            st.markdown(
+                (
+                    f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_HOURS} hrs): '
+                    f"{len(overdue)} unanswered doubt{'s' if len(overdue) != 1 else ''} need a teacher.</div>"
+                ),
+                unsafe_allow_html=True,
+            )
 
     if user["role"] == "teacher" and not teacher_subjects(user):
         st.info("Pick the subjects you teach so private doubts reach the right teachers.")
         picked = subject_checkboxes("home_teacher")
-        if st.button("Save subjects", type="primary"):
+        if st.button("💾 Save subjects", type="primary"):
             if not picked:
                 st.warning("Choose at least one subject.")
             else:
@@ -790,6 +985,8 @@ def render_home(data, user):
 
     only_important = st.checkbox("Show important doubts only", key="home_important")
     feed = visible_doubts(data, user)
+    if subject_choice != "All subjects":
+        feed = [doubt for doubt in feed if doubt.get("subject") == subject_choice]
     if only_important:
         feed = [doubt for doubt in feed if doubt.get("important")]
 
@@ -826,7 +1023,7 @@ def render_home(data, user):
 
 
 def back_home():
-    if st.button("⟵ Back", type="tertiary"):
+    if st.button("⬅️ Back", type="tertiary"):
         go_back()
 
 
@@ -875,8 +1072,13 @@ def render_doubt(data, user):
         st.info("This doubt is private to teachers of that subject.")
         return
     st.subheader(doubt["subject"])
-    if user["role"] == "teacher":
-        star_label = "★ Important" if not doubt.get("important") else "☆ Remove important"
+    if is_overdue(doubt):
+        st.markdown(
+            f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_HOURS} hrs) — this doubt still needs an answer.</div>',
+            unsafe_allow_html=True,
+        )
+    if is_verified_teacher(user):
+        star_label = "⭐ Mark as important" if not doubt.get("important") else "🤍 Remove important"
         if st.button(star_label, key=f"star-{doubt['id']}"):
             doubt["important"] = not doubt.get("important", False)
             save_data(data)
@@ -887,14 +1089,16 @@ def render_doubt(data, user):
         st.caption("Waiting for an answer")
         if user["role"] == "student" and doubt["student_id"] != user["id"]:
             render_answer_form(data, user, doubt)
-        elif user["role"] == "teacher":
+        elif is_verified_teacher(user):
             render_answer_form(data, user, doubt)
+        elif is_pending_teacher(user):
+            st.warning("Your teacher account is pending approval, so you cannot answer yet.")
         return
     for answer in doubt["answers"]:
         render_answer_card(answer, data)
         author = find_user(data, answer["author_id"])
         author_role = author["role"] if author else "student"
-        if user["role"] == "teacher" and author_role == "student":
+        if is_verified_teacher(user) and author_role == "student":
             teacher_answer_tools(data, user, doubt, answer)
 
 
@@ -944,10 +1148,12 @@ def render_ask(data, user):
             height=140,
             placeholder="What is confusing, and what have you already tried?",
         )
-        posted = st.form_submit_button("Post", type="primary", **stretch_kwargs(st.form_submit_button))
+        posted = st.form_submit_button("🚀 Post my doubt", type="primary", **stretch_kwargs(st.form_submit_button))
     if posted:
         text = question.strip()
-        if len(text) < 10:
+        if doubts_posted_today(data, user["id"]) >= DAILY_DOUBT_LIMIT:
+            st.error("Daily limit reached: You can only ask 6 doubts per day.")
+        elif len(text) < 10:
             st.warning("Write a little more so a classmate knows how to help.")
         else:
             attachments = []
@@ -995,9 +1201,12 @@ def render_ask(data, user):
 
 
 def render_answer_form(data, user, doubt):
+    if user.get("role") == "teacher" and not is_verified_teacher(user):
+        st.warning("Pending teachers cannot answer doubts until two teachers approve the account.")
+        return
     with st.form(f"answer-{doubt['id']}", clear_on_submit=True):
         explanation = st.text_area("Type your answer", height=120, key=f"answer-text-{doubt['id']}")
-        sent = st.form_submit_button("Answer", type="primary", **stretch_kwargs(st.form_submit_button))
+        sent = st.form_submit_button("💡 Send answer", type="primary", **stretch_kwargs(st.form_submit_button))
     if sent:
         text = explanation.strip()
         if len(text) < 10:
@@ -1032,8 +1241,13 @@ def render_help(data, user):
     back_home()
     heading = "Help a student" if user["role"] == "teacher" else "Help a classmate"
     st.subheader(heading)
+    if is_pending_teacher(user):
+        st.warning("Your teacher account is pending approval. You can read doubts, but you cannot answer yet.")
+    subject_choice = st.selectbox("Subject filter", ["All subjects"] + SUBJECTS, key="help_subject_filter")
     only_important = st.checkbox("Show important doubts only", key="help_important")
     open_doubts = [doubt for doubt in visible_doubts(data, user) if doubt["status"] == "Open"]
+    if subject_choice != "All subjects":
+        open_doubts = [doubt for doubt in open_doubts if doubt.get("subject") == subject_choice]
     if only_important:
         open_doubts = [doubt for doubt in open_doubts if doubt.get("important")]
     open_doubts.sort(key=lambda doubt: (doubt.get("important", False), doubt["created_at"]), reverse=True)
@@ -1054,18 +1268,18 @@ def teacher_answer_tools(data, user, doubt, answer):
     edit_key = f"edit-{answer['id']}"
     cols = st.columns(4)
     with cols[3]:
-        star_label = "★ Important" if not doubt.get("important") else "☆ Unstar"
+        star_label = "⭐ Important" if not doubt.get("important") else "🤍 Unstar"
         if st.button(star_label, key=f"star-ans-{answer['id']}"):
             doubt["important"] = not doubt.get("important", False)
             save_data(data)
             flash("Marked as important." if doubt["important"] else "Removed the important mark.")
             st.rerun()
     with cols[0]:
-        if st.button("Edit", key=f"edit-btn-{answer['id']}", **stretch_kwargs(st.button)):
+        if st.button("✏️ Edit", key=f"edit-btn-{answer['id']}", **stretch_kwargs(st.button)):
             st.session_state[edit_key] = True
             st.rerun()
     with cols[1]:
-        if st.button("Delete", key=f"delete-{answer['id']}", **stretch_kwargs(st.button)):
+        if st.button("🗑️ Delete", key=f"delete-{answer['id']}", **stretch_kwargs(st.button)):
             doubt["answers"] = [item for item in doubt["answers"] if item["id"] != answer["id"]]
             if not doubt["answers"]:
                 doubt["status"] = "Open"
@@ -1073,7 +1287,7 @@ def teacher_answer_tools(data, user, doubt, answer):
             flash("Answer deleted.")
             st.rerun()
     with cols[2]:
-        if not answer.get("verified") and st.button("Verify", key=f"verify-{answer['id']}", type="primary", **stretch_kwargs(st.button)):
+        if not answer.get("verified") and st.button("✅ Verify", key=f"verify-{answer['id']}", type="primary", **stretch_kwargs(st.button)):
             answer["verified"] = True
             answer["points_awarded"] = answer.get("points_awarded", 0) + TEACHER_VERIFY_POINTS
             if author:
@@ -1084,7 +1298,7 @@ def teacher_answer_tools(data, user, doubt, answer):
     if st.session_state.get(edit_key):
         with st.form(f"edit-form-{answer['id']}"):
             text = st.text_area("Edit answer", value=answer["explanation"], height=120)
-            saved = st.form_submit_button("Save", type="primary", **stretch_kwargs(st.form_submit_button))
+            saved = st.form_submit_button("💾 Save", type="primary", **stretch_kwargs(st.form_submit_button))
         if saved:
             cleaned = text.strip()
             if len(cleaned) < 10:
@@ -1111,8 +1325,8 @@ def render_check(data, user):
     show_flash()
     back_home()
     st.subheader("Check answers")
-    if user["role"] != "teacher":
-        st.info("Only a teacher can check answers.")
+    if not is_verified_teacher(user):
+        st.info("Only a verified teacher can check answers.")
         return
     waiting = [(doubt, answer) for doubt, answer in pending_checks(data) if can_see_doubt(user, doubt)]
     if not waiting:
