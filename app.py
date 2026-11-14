@@ -1,5 +1,6 @@
 """EduMatch: sign in with a User ID, then open a personal dashboard."""
 
+import base64
 import hashlib
 import html
 import inspect
@@ -35,8 +36,10 @@ STUDENT_SOLVE_POINTS = 10
 TEACHER_VERIFY_POINTS = 15
 TEACHER_SOLVE_POINTS = 25
 DAILY_DOUBT_LIMIT = 6
-OVERDUE_HOURS = 6
+OVERDUE_MINUTES = 45
 TEACHER_APPROVALS_NEEDED = 2
+IMAGE_EXTS = (".png", ".jpg", ".jpeg", ".gif", ".webp")
+AUDIO_EXTS = (".mp3", ".wav", ".m4a", ".ogg", ".webm", ".aac", ".flac")
 
 USERNAME_RE = re.compile(r"^(?=(?:[a-z]*[^a-z0-9][a-z]*)+)(?!(?:\D*\d){3})[a-z0-9._-]+$")
 USERNAME_HINT = "Use lowercase letters, at least one symbol such as _ . or -, and at most two digits."
@@ -66,6 +69,7 @@ def load_data():
     with open(DATA_PATH, "r", encoding="utf-8") as handle:
         data = json.load(handle)
     ensure_teacher_bootstrap(data)
+    fan_out_overdue_notices(data)
     return data
 
 
@@ -358,7 +362,7 @@ def is_overdue(doubt):
         created = parse_stamp(doubt["created_at"])
     except (TypeError, ValueError):
         return False
-    return datetime.now() - created > timedelta(hours=OVERDUE_HOURS)
+    return datetime.now() - created > timedelta(minutes=OVERDUE_MINUTES)
 
 
 def approve_teacher(data, candidate, reviewer):
@@ -389,42 +393,140 @@ def visible_doubts(data, user):
     return [doubt for doubt in data["doubts"] if can_see_doubt(user, doubt)]
 
 
+def teachers_for_doubt(data, doubt):
+    subject = doubt.get("subject")
+    matched = [teacher for teacher in verified_teachers(data) if subject in teacher_subjects(teacher)]
+    if matched:
+        return matched
+    return verified_teachers(data)
+
+
+def notify_teachers_for_doubt(data, doubt, kind, message):
+    changed = False
+    key = f"{kind}-{doubt.get('id')}"
+    for teacher in teachers_for_doubt(data, doubt):
+        notices = teacher.setdefault("notifications", [])
+        if any(item.get("key") == key for item in notices):
+            continue
+        notices.append(
+            {
+                "id": f"n{uuid4().hex[:8]}",
+                "key": key,
+                "kind": kind,
+                "doubt_id": doubt.get("id"),
+                "subject": doubt.get("subject"),
+                "message": message,
+                "at": now_stamp(),
+                "read": False,
+            }
+        )
+        changed = True
+    return changed
+
+
+def fan_out_overdue_notices(data):
+    changed = False
+    for doubt in data.get("doubts", []):
+        if not is_overdue(doubt):
+            continue
+        if notify_teachers_for_doubt(
+            data,
+            doubt,
+            "overdue",
+            f"{doubt.get('subject')} doubt has been waiting more than {OVERDUE_MINUTES} minutes.",
+        ):
+            changed = True
+    if changed:
+        save_data(data)
+
+
+def unread_teacher_notices(user):
+    return [item for item in user.get("notifications", []) if not item.get("read")]
+
+
 def ensure_upload_dir():
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 
+def attachment_kind(name, mime=""):
+    lower = (name or "").lower()
+    media = (mime or "").lower()
+    if media.startswith("image/") or lower.endswith(IMAGE_EXTS):
+        return "image"
+    if media.startswith("audio/") or lower.endswith(AUDIO_EXTS):
+        return "audio"
+    return "file"
+
+
 def save_upload(upload, prefix):
     ensure_upload_dir()
-    name = Path(getattr(upload, "name", "capture.jpg")).name
+    name = Path(getattr(upload, "name", "capture.bin")).name
+    mime = getattr(upload, "type", "") or ""
+    kind = attachment_kind(name, mime)
+    if not name or name == "capture.bin":
+        if kind == "image":
+            name = "photo.jpg"
+        elif kind == "audio":
+            name = "voice.wav"
     safe = re.sub(r"[^a-zA-Z0-9._-]", "_", name) or "file.bin"
     stored = f"{prefix}_{uuid4().hex[:8]}_{safe}"
     path = os.path.join(UPLOAD_DIR, stored)
-    data = upload.getvalue() if hasattr(upload, "getvalue") else upload.read()
+    raw = upload.getvalue() if hasattr(upload, "getvalue") else upload.read()
     with open(path, "wb") as handle:
-        handle.write(data)
-    kind = "image" if stored.lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")) else "file"
-    return {"id": f"f{uuid4().hex[:8]}", "name": name, "path": stored, "kind": kind}
+        handle.write(raw)
+    return {
+        "id": f"f{uuid4().hex[:8]}",
+        "name": name,
+        "path": stored,
+        "kind": kind,
+        "mime": mime,
+        "data": base64.b64encode(raw).decode("ascii"),
+    }
 
 
-def collect_new_attachments():
-    saved = []
-    for upload in st.session_state.pop("pending_files", []) or []:
-        saved.append(save_upload(upload, "file"))
-    camera = st.session_state.pop("pending_camera", None)
-    if camera is not None:
-        saved.append(save_upload(camera, "cam"))
-    return saved
+def attachment_bytes(item):
+    encoded = item.get("data")
+    if encoded:
+        try:
+            return base64.b64decode(encoded)
+        except (TypeError, ValueError):
+            pass
+    path = os.path.join(UPLOAD_DIR, item.get("path", ""))
+    if os.path.exists(path):
+        with open(path, "rb") as handle:
+            return handle.read()
+    return None
 
 
 def render_attachment_list(attachments):
     if not attachments:
         return
     for item in attachments:
-        path = os.path.join(UPLOAD_DIR, item.get("path", ""))
-        if item.get("kind") == "image" and os.path.exists(path):
-            st.image(path, caption=item.get("name", "Photo"), width=220)
+        raw = attachment_bytes(item)
+        kind = item.get("kind") or attachment_kind(item.get("name", ""), item.get("mime", ""))
+        label = item.get("name", "Attachment")
+        if kind == "image" and raw:
+            st.image(raw, caption=label, width=280)
+        elif kind == "audio" and raw:
+            st.caption(f"🎤 {label}")
+            st.audio(raw)
+        elif raw:
+            st.caption(f"📎 {label}")
+            st.download_button(
+                f"⬇️ Download {label}",
+                data=raw,
+                file_name=label,
+                key=f"dl-{item.get('id', label)}",
+            )
         else:
-            st.caption(f"📎 {item.get('name', 'Attachment')}")
+            st.caption(f"📎 {label}")
+
+
+def maybe_audio_input(key):
+    recorder = getattr(st, "audio_input", None)
+    if recorder is None:
+        return None
+    return recorder("🎤 Record a voice note", key=key)
 
 
 def inject_css():
@@ -842,8 +944,11 @@ def extra_pills(doubt):
         bits.append('<span class="feed-pill pill-private">Private</span>')
     if doubt.get("important"):
         bits.append('<span class="feed-pill pill-star">★ Important</span>')
-    if doubt.get("attachments"):
-        bits.append('<span class="feed-pill pill-mine">📎</span>')
+    attachments = doubt.get("attachments") or []
+    if any((item.get("kind") == "audio") for item in attachments):
+        bits.append('<span class="feed-pill pill-mine">🎤 Voice</span>')
+    elif attachments:
+        bits.append('<span class="feed-pill pill-mine">📷 Photo</span>')
     if is_overdue(doubt):
         bits.append('<span class="feed-pill pill-overdue">Overdue</span>')
     return "".join(bits)
@@ -870,6 +975,7 @@ def doubt_preview(doubt, data, key, kind="open"):
         ),
         unsafe_allow_html=True,
     )
+    render_attachment_list(doubt.get("attachments", []))
     if st.button("👀 Open", key=key, **stretch_kwargs(st.button)):
         go("doubt", doubt["id"])
 
@@ -961,12 +1067,36 @@ def render_home(data, user):
                                 st.rerun()
                             st.markdown("</div>", unsafe_allow_html=True)
 
-        overdue = [doubt for doubt in visible_doubts(data, user) if is_overdue(doubt)]
+        overdue = [
+            doubt
+            for doubt in visible_doubts(data, user)
+            if is_overdue(doubt) and (not teacher_subjects(user) or doubt.get("subject") in teacher_subjects(user))
+        ]
+        notices = unread_teacher_notices(user)
+        if notices:
+            st.markdown("### 🔔 Teacher alerts")
+            for notice in notices[-8:][::-1]:
+                st.markdown(
+                    f'<div class="overdue-banner">{html.escape(notice.get("message", "New update"))}</div>',
+                    unsafe_allow_html=True,
+                )
+                cols = st.columns([3, 1])
+                with cols[0]:
+                    if notice.get("doubt_id") and st.button("👀 Open doubt", key=f"notice-{notice['id']}"):
+                        notice["read"] = True
+                        save_data(data)
+                        go("doubt", notice["doubt_id"])
+                with cols[1]:
+                    if st.button("✔️ Seen", key=f"seen-{notice['id']}"):
+                        notice["read"] = True
+                        save_data(data)
+                        st.rerun()
         if overdue:
             st.markdown(
                 (
-                    f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_HOURS} hrs): '
-                    f"{len(overdue)} unanswered doubt{'s' if len(overdue) != 1 else ''} need a teacher.</div>"
+                    f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_MINUTES} min): '
+                    f"{len(overdue)} unanswered doubt{'s' if len(overdue) != 1 else ''} in your subject"
+                    f"{'s' if len(overdue) != 1 else ''}.</div>"
                 ),
                 unsafe_allow_html=True,
             )
@@ -1059,6 +1189,7 @@ def render_answer_card(answer, data):
         ),
         unsafe_allow_html=True,
     )
+    render_attachment_list(answer.get("attachments", []))
 
 
 def render_doubt(data, user):
@@ -1074,7 +1205,7 @@ def render_doubt(data, user):
     st.subheader(doubt["subject"])
     if is_overdue(doubt):
         st.markdown(
-            f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_HOURS} hrs) — this doubt still needs an answer.</div>',
+            f'<div class="overdue-banner">Overdue (&gt;{OVERDUE_MINUTES} min) — teachers of this subject have been notified.</div>',
             unsafe_allow_html=True,
         )
     if is_verified_teacher(user):
@@ -1117,31 +1248,33 @@ def render_ask(data, user):
         index=SUBJECTS.index(st.session_state["subject"]) if st.session_state["subject"] in SUBJECTS else 0,
     )
     ask_privately = st.toggle("Ask teacher privately", help="Only teachers of this subject will see it.")
-    st.caption("📎 Attach a file, photo, or camera picture.")
+    st.caption("📷 Photos, files, and 🎤 voice notes are saved on the doubt so teachers and classmates can see and hear them.")
     files = st.file_uploader(
-        "📎 Attach files",
+        "📎 Attach files, photos, or voice",
         accept_multiple_files=True,
-        type=["png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "doc", "docx"],
-        label_visibility="collapsed",
+        type=["png", "jpg", "jpeg", "gif", "webp", "pdf", "txt", "doc", "docx", "mp3", "wav", "m4a", "ogg", "webm"],
         key="ask_files",
     )
     camera = st.camera_input("📷 Take a picture", key="ask_camera")
+    voice = maybe_audio_input("ask_voice")
     previews = list(files or [])
     if camera is not None:
         previews.append(camera)
+    if voice is not None:
+        previews.append(voice)
     if previews:
-        st.caption("Attached")
+        st.caption("Attached — everyone who can open this doubt will see these.")
         for index, item in enumerate(previews):
-            name = getattr(item, "name", f"photo-{index + 1}.jpg")
+            name = getattr(item, "name", f"file-{index + 1}")
             mime = getattr(item, "type", "") or ""
-            cols = st.columns([4, 1])
-            with cols[0]:
-                if str(mime).startswith("image/") or str(name).lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")):
-                    st.image(item, caption=name, width=180)
-                else:
-                    st.write(f"📎 {name}")
-            with cols[1]:
-                st.caption("Clear the uploader or retake to remove.")
+            kind = attachment_kind(name, mime)
+            if kind == "image":
+                st.image(item, caption=name, width=180)
+            elif kind == "audio":
+                st.audio(item)
+                st.caption(f"🎤 {name}")
+            else:
+                st.write(f"📎 {name}")
     with st.form("ask_form", clear_on_submit=True):
         question = st.text_area(
             "Question",
@@ -1161,27 +1294,34 @@ def render_ask(data, user):
                 attachments.append(save_upload(upload, "file"))
             if camera is not None:
                 attachments.append(save_upload(camera, "cam"))
-            data["doubts"].append(
-                {
-                    "id": next_id(data["doubts"], "d"),
-                    "student_id": user["id"],
-                    "student_name": user.get("name", username_of(user)),
-                    "student_username": username_of(user),
-                    "subject": st.session_state["subject"],
-                    "question": text,
-                    "status": "Open",
-                    "created_at": now_stamp(),
-                    "answers": [],
-                    "private": bool(ask_privately),
-                    "important": False,
-                    "attachments": attachments,
-                }
+            if voice is not None:
+                attachments.append(save_upload(voice, "voice"))
+            doubt = {
+                "id": next_id(data["doubts"], "d"),
+                "student_id": user["id"],
+                "student_name": user.get("name", username_of(user)),
+                "student_username": username_of(user),
+                "subject": st.session_state["subject"],
+                "question": text,
+                "status": "Open",
+                "created_at": now_stamp(),
+                "answers": [],
+                "private": bool(ask_privately),
+                "important": False,
+                "attachments": attachments,
+            }
+            data["doubts"].append(doubt)
+            notify_teachers_for_doubt(
+                data,
+                doubt,
+                "new",
+                f"New {doubt['subject']} doubt from {username_of(user)}. Photo and voice notes are on the post.",
             )
             save_data(data)
             if ask_privately:
-                flash(f"Posted privately to teachers of {st.session_state['subject']}.")
+                flash(f"Posted privately. Teachers of {st.session_state['subject']} were notified.")
             else:
-                flash("Posted. A classmate can answer it from Help.")
+                flash("Posted. Teachers of this subject were notified, and classmates can see the photos too.")
             st.rerun()
 
     st.markdown("#### My doubts")
@@ -1193,6 +1333,7 @@ def render_ask(data, user):
         with st.container(border=True):
             st.markdown(f"**{doubt['subject']}**")
             st.write(doubt["question"])
+            render_attachment_list(doubt.get("attachments", []))
             if doubt["answers"]:
                 latest = doubt["answers"][-1]
                 render_answer_card(latest, data)
@@ -1204,6 +1345,14 @@ def render_answer_form(data, user, doubt):
     if user.get("role") == "teacher" and not is_verified_teacher(user):
         st.warning("Pending teachers cannot answer doubts until two teachers approve the account.")
         return
+    st.caption("You can attach a photo or a 🎤 voice note with your answer.")
+    answer_files = st.file_uploader(
+        "📎 Answer files",
+        accept_multiple_files=True,
+        type=["png", "jpg", "jpeg", "gif", "webp", "mp3", "wav", "m4a", "ogg", "webm"],
+        key=f"ans-files-{doubt['id']}",
+    )
+    answer_voice = maybe_audio_input(f"ans-voice-{doubt['id']}")
     with st.form(f"answer-{doubt['id']}", clear_on_submit=True):
         explanation = st.text_area("Type your answer", height=120, key=f"answer-text-{doubt['id']}")
         sent = st.form_submit_button("💡 Send answer", type="primary", **stretch_kwargs(st.form_submit_button))
@@ -1214,6 +1363,11 @@ def render_answer_form(data, user, doubt):
             return
         points = TEACHER_SOLVE_POINTS if user["role"] == "teacher" else STUDENT_SOLVE_POINTS
         badge = "Master Mentor" if user["role"] == "teacher" else "Contributor"
+        attachments = []
+        for upload in answer_files or []:
+            attachments.append(save_upload(upload, "ans"))
+        if answer_voice is not None:
+            attachments.append(save_upload(answer_voice, "ansvoice"))
         doubt["answers"].append(
             {
                 "id": next_id(
@@ -1227,6 +1381,7 @@ def render_answer_form(data, user, doubt):
                 "points_awarded": points,
                 "verified": user["role"] == "teacher",
                 "upvotes": [],
+                "attachments": attachments,
             }
         )
         doubt["status"] = "Resolved"
